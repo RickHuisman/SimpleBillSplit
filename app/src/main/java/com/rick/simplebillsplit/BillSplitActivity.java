@@ -2,6 +2,7 @@ package com.rick.simplebillsplit;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -17,9 +18,9 @@ import java.math.BigDecimal;
 
 public class BillSplitActivity extends AppCompatActivity {
 
+    BigDecimal mBillTotal;
     BigDecimal mBill;
     String mBillString = "";
-    BigDecimal mBillTotal;
     BigDecimal mTip;
     int mTipPercentage;
     int mFriends;
@@ -80,6 +81,24 @@ public class BillSplitActivity extends AppCompatActivity {
 
             }
         });
+
+        Button splitBillButton = findViewById(R.id.split_bill_button);
+        splitBillButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startResultActivity();
+            }
+        });
+    }
+
+    private void startResultActivity() {
+        Intent intent = new Intent(getApplicationContext(), ResultBillActivity.class);
+        intent.putExtra("totalBill", mBillTotal);
+        intent.putExtra("bill", mBill);
+        intent.putExtra("amountOfPerson", mFriends);
+        intent.putExtra("tip", mTip);
+        intent.putExtra("tipPercentage", mTipPercentage);
+        startActivity(intent);
     }
 
     private void setUpChips() {
@@ -194,9 +213,9 @@ public class BillSplitActivity extends AppCompatActivity {
 
         // check if mBill has 2 decimals
         if (mBill != null) {
-            String string = mBill.stripTrailingZeros().toPlainString();
-            int index = string.indexOf(".");
-            int numOfDecimals = index < 0 ? 0 : string.length() - index - 1;
+            String billString = mBill.stripTrailingZeros().toPlainString();
+            int index = billString.indexOf(".");
+            int numOfDecimals = index < 0 ? 0 : billString.length() - index - 1;
 
             if (numOfDecimals >= 2)
                 return;
@@ -300,7 +319,7 @@ public class BillSplitActivity extends AppCompatActivity {
         }
 
         TextView tipText = findViewById(R.id.tip_text);
-        tipText.setText("%" + String.valueOf(mTipPercentage));
+        tipText.setText(String.valueOf(mTipPercentage) + "%");
 
         setBillTotal();
     }
