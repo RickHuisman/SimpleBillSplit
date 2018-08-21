@@ -3,10 +3,9 @@ package com.rick.simplebillsplit;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.SeekBar;
 import android.widget.TextView;
-
-import com.github.glomadrian.materialanimatedswitch.MaterialAnimatedSwitch;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -26,8 +25,9 @@ public class PersonListAdapter extends RecyclerView.Adapter<PersonListAdapter.Pe
         BigDecimal billDivided = billTotal.divide(new BigDecimal(persons), RoundingMode.HALF_UP);
         BigDecimal mBasePercentage = new BigDecimal(100).divide(BigDecimal.valueOf(persons), 2, RoundingMode.HALF_UP);
 
+        char[] alphabet = "abcdefghijklmnopqrstuvwxyz".toCharArray();
         for (int i = 0; i < persons; i++) {
-            mPersonList.add(new Person('a', billDivided, mBasePercentage));
+            mPersonList.add(new Person(alphabet[i], billDivided, mBasePercentage, false));
         }
     }
 
@@ -40,33 +40,36 @@ public class PersonListAdapter extends RecyclerView.Adapter<PersonListAdapter.Pe
 
     @Override
     public void onBindViewHolder(@NonNull final PersonListViewHolder holder, int position) {
-        final Person person = mPersonList.get(position);
+        Person person = mPersonList.get(position);
 
         holder.mPersonText.setText("Person " + person.name.toString().toUpperCase());
         holder.mMoneyText.setText("$" + String.valueOf(person.money));
         holder.mPercentageText.setText(String.valueOf(person.percentage) + "%");
-
-        holder.mPercentageSeekbar.setOnSeekBarChangeListener(null);
-
         holder.mPercentageSeekbar.setProgress(Integer.valueOf(person.percentage.setScale(0, RoundingMode.HALF_UP).toString()));
 
+        if (person.isLocked()) {
+            holder.mLockCheckBox.setChecked(false);
+        } else {
+            holder.mLockCheckBox.setChecked(true);
+        }
+
+        holder.mPercentageSeekbar.setOnSeekBarChangeListener(null);
         holder.mPercentageSeekbar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean b) {
-                BigDecimal newMoney = new BigDecimal(String.valueOf(mBillTotal.multiply(new BigDecimal("0." + progress))));
-                int newPercentage = (100 - progress) / (getItemCount() - 1);
+            public void onProgressChanged(SeekBar seekBar, int i, boolean fromUser) {
+                if (fromUser) {
+                    // set progress
+                    holder.mPercentageText.setText(i + "%");
+                    mPersonList.get(holder.getLayoutPosition()).setPercentage(new BigDecimal(i));
 
-                for (Person p: mPersonList) {
-                    p.setPercentage(new BigDecimal(newPercentage));
-                    BigDecimal newTotalMoney = new BigDecimal(String.valueOf(mBillTotal.subtract(newMoney)));
-                    p.money = newTotalMoney.divide(BigDecimal.valueOf(getItemCount() - 1)).setScale(0, RoundingMode.HALF_UP);
+                    // set money text
+                    String newMoney = String.valueOf(mBillTotal.multiply(new BigDecimal("0." + i)).setScale(0, RoundingMode.HALF_UP));
+                    holder.mMoneyText.setText("$" + String.valueOf(newMoney));
 
-                    notifyItemChanged(mPersonList.indexOf(p));
+                    // lock item
+                    mPersonList.get(holder.getLayoutPosition()).setLocked(true);
+                    holder.mLockCheckBox.setChecked(false);
                 }
-
-                mPersonList.get(mPersonList.indexOf(person)).setPercentage(new BigDecimal(progress));
-                mPersonList.get(mPersonList.indexOf(person)).money = newMoney.setScale(0, RoundingMode.HALF_UP);
-                notifyItemChanged(mPersonList.indexOf(person));
             }
 
             @Override
@@ -76,7 +79,42 @@ public class PersonListAdapter extends RecyclerView.Adapter<PersonListAdapter.Pe
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+                int progress = seekBar.getProgress();
 
+                // get amount of persons that are locked
+                int amountOfPersonsLocked = 0;
+                BigDecimal perOfLocked = new BigDecimal(0);
+
+                // get the total percentage of locked persons
+                for (Person p: mPersonList) {
+                    if (p.isLocked()) {
+                        amountOfPersonsLocked++;
+                        perOfLocked = perOfLocked.add(p.getPercentage());
+                    }
+                }
+
+                // new Percentage
+                BigDecimal newPercentage = new BigDecimal(100).subtract(perOfLocked);
+
+                // divide new percentage by persons that are not locked
+                BigDecimal percentagePerPerson = newPercentage.divide(new BigDecimal(getItemCount() - amountOfPersonsLocked), 0, RoundingMode.HALF_UP);
+
+                // set new percentage per person to the unselected persons
+                for (Person p: mPersonList) {
+                    if (!p.isLocked()) {
+                        p.setPercentage(percentagePerPerson);
+
+                        System.out.println("percentage per person is " + percentagePerPerson);
+
+                        BigDecimal newMoney = mBillTotal.multiply(new BigDecimal("0." + percentagePerPerson)).setScale(0, RoundingMode.HALF_UP);
+
+                        System.out.println("new money is " + newMoney);
+                        p.setMoney(newMoney);
+//                        p.setMoney(mBillTotal.multiply(new BigDecimal("0." + percentagePerPerson)).setScale(0, RoundingMode.HALF_UP));
+
+                        notifyItemChanged(mPersonList.indexOf(p));
+                    }
+                }
             }
         });
     }
@@ -90,6 +128,7 @@ public class PersonListAdapter extends RecyclerView.Adapter<PersonListAdapter.Pe
 
         TextView mPersonText, mMoneyText, mPercentageText;
         SeekBar mPercentageSeekbar;
+        CheckBox mLockCheckBox;
 
         PersonListViewHolder(View itemView) {
             super(itemView);
@@ -97,6 +136,7 @@ public class PersonListAdapter extends RecyclerView.Adapter<PersonListAdapter.Pe
             mMoneyText = itemView.findViewById(R.id.money_text);
             mPercentageText = itemView.findViewById(R.id.money_percentage_text);
             mPercentageSeekbar = itemView.findViewById(R.id.money_seekbar);
+            mLockCheckBox = itemView.findViewById(R.id.lock_checkbox);
         }
     }
 }
