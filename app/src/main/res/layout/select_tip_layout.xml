@@ -102,7 +102,7 @@
             android:layout_width="66dp"
             android:layout_height="32dp"
             android:layout_marginStart="12.25dp"
-            android:text="~%"
+            android:text="#"
             android:textAppearance="@style/ChipTheme"
             app:rippleColor="@color/colorPrimary"
             app:chipBackgroundColor="@color/colorBackground"

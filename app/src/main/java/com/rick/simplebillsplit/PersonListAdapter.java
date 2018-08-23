@@ -53,22 +53,94 @@ public class PersonListAdapter extends RecyclerView.Adapter<PersonListAdapter.Pe
             holder.mLockCheckBox.setChecked(true);
         }
 
+        holder.mLockCheckBox.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (mPersonList.get(holder.getLayoutPosition()).locked) {
+                    holder.mLockCheckBox.setChecked(true);
+                    mPersonList.get(holder.getLayoutPosition()).setLocked(false);
+
+                    // get percentage of locked items
+                    BigDecimal perOfLocked = new BigDecimal(0);
+
+                    int amountOfPersonsLocked = 0;
+                    for (Person p: mPersonList) {
+                        if (p.isLocked()) {
+                            amountOfPersonsLocked++;
+                            perOfLocked = perOfLocked.add(p.getPercentage());
+                        }
+                    }
+
+                    //	result = 100 - percentage of locked items
+                    BigDecimal result = new BigDecimal(100).subtract(perOfLocked);
+
+                    BigDecimal percentagePerPerson = result.divide(new BigDecimal(getItemCount() - amountOfPersonsLocked), 0, RoundingMode.HALF_UP);
+
+                    // set new percentage per person to the unselected persons
+                    for (Person p: mPersonList) {
+                        if (!p.isLocked()) {
+                            p.setPercentage(percentagePerPerson);
+
+                            BigDecimal money = mBillTotal.multiply(new BigDecimal("0." + percentagePerPerson)).setScale(0, RoundingMode.HALF_UP);
+                            p.setMoney(money);
+
+                            notifyItemChanged(mPersonList.indexOf(p));
+                        }
+                    }
+                } else {
+                    holder.mLockCheckBox.setChecked(false);
+                    mPersonList.get(holder.getLayoutPosition()).setLocked(true);
+                }
+            }
+        });
+
         holder.mPercentageSeekbar.setOnSeekBarChangeListener(null);
         holder.mPercentageSeekbar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int i, boolean fromUser) {
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
                     // set progress
-                    holder.mPercentageText.setText(i + "%");
-                    mPersonList.get(holder.getLayoutPosition()).setPercentage(new BigDecimal(i));
+                    holder.mPercentageText.setText(progress + "%");
+                    mPersonList.get(holder.getLayoutPosition()).setPercentage(new BigDecimal(progress));
 
                     // set money text
-                    String newMoney = String.valueOf(mBillTotal.multiply(new BigDecimal("0." + i)).setScale(0, RoundingMode.HALF_UP));
+                    String newMoney = String.valueOf(mBillTotal.multiply(new BigDecimal("0." + progress)).setScale(0, RoundingMode.HALF_UP));
                     holder.mMoneyText.setText("$" + String.valueOf(newMoney));
 
                     // lock item
                     mPersonList.get(holder.getLayoutPosition()).setLocked(true);
                     holder.mLockCheckBox.setChecked(false);
+
+                    // check if progress from locked persons is > 100
+
+                    // get percentage of locked items
+                    BigDecimal perOfLocked = new BigDecimal(0);
+
+                    for (Person p: mPersonList) {
+                        if (p.isLocked()) {
+                            perOfLocked = perOfLocked.add(p.getPercentage());
+                        }
+                    }
+
+                    //	result = 100 - percentage of locked items
+                    BigDecimal result = new BigDecimal(100).subtract(perOfLocked);
+
+                    System.out.println("perOfLocked is " + perOfLocked + ", result is " + result + ", progress is " + progress);
+                    //	if new progress > result; progress == result
+                    if (result.compareTo(new BigDecimal(progress)) == -1 ) {
+                        if (result.compareTo(new BigDecimal(0)) == -1) {
+                            int maxProgress = progress - Integer.valueOf(result.abs().toString());
+
+                            holder.mPercentageSeekbar.setProgress(maxProgress);
+
+                            holder.mPercentageText.setText(maxProgress + "%");
+                            mPersonList.get(holder.getLayoutPosition()).setPercentage(new BigDecimal(maxProgress));
+
+                            // set money text
+                            String money = String.valueOf(mBillTotal.multiply(new BigDecimal("0." + maxProgress)).setScale(0, RoundingMode.HALF_UP));
+                            holder.mMoneyText.setText("$" + String.valueOf(money));
+                        }
+                    }
                 }
             }
 
@@ -79,8 +151,6 @@ public class PersonListAdapter extends RecyclerView.Adapter<PersonListAdapter.Pe
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                int progress = seekBar.getProgress();
-
                 // get amount of persons that are locked
                 int amountOfPersonsLocked = 0;
                 BigDecimal perOfLocked = new BigDecimal(0);
@@ -96,23 +166,31 @@ public class PersonListAdapter extends RecyclerView.Adapter<PersonListAdapter.Pe
                 // new Percentage
                 BigDecimal newPercentage = new BigDecimal(100).subtract(perOfLocked);
 
-                // divide new percentage by persons that are not locked
-                BigDecimal percentagePerPerson = newPercentage.divide(new BigDecimal(getItemCount() - amountOfPersonsLocked), 0, RoundingMode.HALF_UP);
+                int result = newPercentage.compareTo(new BigDecimal(0));
+                if (result == 0 || result == -1) {
+                    for (Person p: mPersonList) {
+                        if (!p.isLocked()) {
 
-                // set new percentage per person to the unselected persons
-                for (Person p: mPersonList) {
-                    if (!p.isLocked()) {
-                        p.setPercentage(percentagePerPerson);
+                            p.setPercentage(new BigDecimal(0));
+                            p.setMoney(new BigDecimal(0));
 
-                        System.out.println("percentage per person is " + percentagePerPerson);
+                            notifyItemChanged(mPersonList.indexOf(p));
+                        }
+                    }
+                } else {
+                    // divide new percentage by persons that are not locked
+                    BigDecimal percentagePerPerson = newPercentage.divide(new BigDecimal(getItemCount() - amountOfPersonsLocked), 0, RoundingMode.HALF_UP);
 
-                        BigDecimal newMoney = mBillTotal.multiply(new BigDecimal("0." + percentagePerPerson)).setScale(0, RoundingMode.HALF_UP);
+                    // set new percentage per person to the unselected persons
+                    for (Person p: mPersonList) {
+                        if (!p.isLocked()) {
+                            p.setPercentage(percentagePerPerson);
 
-                        System.out.println("new money is " + newMoney);
-                        p.setMoney(newMoney);
-//                        p.setMoney(mBillTotal.multiply(new BigDecimal("0." + percentagePerPerson)).setScale(0, RoundingMode.HALF_UP));
+                            BigDecimal money = mBillTotal.multiply(new BigDecimal("0." + percentagePerPerson)).setScale(0, RoundingMode.HALF_UP);
+                            p.setMoney(money);
 
-                        notifyItemChanged(mPersonList.indexOf(p));
+                            notifyItemChanged(mPersonList.indexOf(p));
+                        }
                     }
                 }
             }
