@@ -1,20 +1,14 @@
 package com.rick.simplebillsplit;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
-import android.text.Editable;
 import android.text.TextUtils;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -30,6 +24,7 @@ public class BillSplitActivity extends AppCompatActivity {
     BigDecimal mTip;
     int mTipPercentage;
     int mFriends;
+    CustomTipDialog mTipDialog;
 
     Chip[] chips = new Chip[5];
 
@@ -193,41 +188,23 @@ public class BillSplitActivity extends AppCompatActivity {
                     break;
                 case R.id.custom_percent_chip:
                     createCustomTip();
-//                    setTipWithColor(30, R.id.custom_percent_chip);
                     break;
             }
         }
     };
 
     private void createCustomTip() {
-        AlertDialog.Builder alert = new AlertDialog.Builder(this);
+        setSelectedChipColors(R.id.custom_percent_chip);
+        mTipDialog = new CustomTipDialog(this, this);
+        mTipDialog.show();
+    }
 
-        EditText edittext = new EditText(this);
-        edittext.setLayoutParams(new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        ));
+    public void cancelTipDialog() {
+        mTipDialog.cancel();
+    }
 
-        alert.setTitle("Enter Your Title");
-
-        alert.setView(edittext);
-
-        alert.setPositiveButton("Yes Option", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int whichButton) {
-                //What ever you want to do with the value
-//                Editable YouEditTextValue = edittext.getText();
-//                //OR
-//                String YouEditTextValue = edittext.getText().toString();
-            }
-        });
-
-        alert.setNegativeButton("No Option", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int whichButton) {
-                // what ever you want to do with No option.
-            }
-        });
-
-        alert.show();
+    public void setCustomTip(int tip) {
+        System.out.println("TEST");
     }
 
     private void resetChipColors() {

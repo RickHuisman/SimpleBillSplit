@@ -109,7 +109,7 @@
             app:chipCornerRadius="8dp"
             app:chipStrokeColor="@color/colorPrimaryLight"
             app:chipStrokeWidth="1dp"
-            app:textStartPadding="15dp" />
+            app:textStartPadding="24dp"/>
 
     </LinearLayout>
 
